@@ -1,0 +1,61 @@
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+  
+  <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+    <h2 class="text-lg font-bold text-slate-800">Historial Completo de Movimientos</h2>
+    
+    <button 
+      (click)="exportToExcel()" 
+      [disabled]="kardex.sortedMovements().length === 0"
+      class="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:disabled:bg-emerald-600">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Descargar Reporte
+    </button>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-bold tracking-wider">
+          <th class="px-6 py-4">Fecha</th>
+          <th class="px-6 py-4">Ref / Docto</th>
+          <th class="px-6 py-4">Producto</th>
+          <th class="px-6 py-4 text-center">Tipo</th>
+          <th class="px-6 py-4 text-center">Operador</th>
+          <th class="px-6 py-4 text-right">Cant.</th>
+          <th class="px-6 py-4 text-right">Costo Unit.</th>
+          <th class="px-6 py-4 text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        @for (mov of kardex.sortedMovements(); track mov.id) {
+          <tr class="hover:bg-slate-50/50 transition-colors">
+            <td class="px-6 py-4 text-sm text-slate-500">{{ mov.date | date:'dd/MM HH:mm' }}</td>
+            <td class="px-6 py-4 font-medium text-slate-700">{{ mov.reference }}</td>
+            <td class="px-6 py-4 font-mono font-medium text-slate-700 text-sm">{{ mov.productCode }}</td>
+            <td class="px-6 py-4 text-center">
+              <span [class]="mov.type === 'ENTRY' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'" class="px-2 py-1 rounded-md text-[10px] font-bold">
+                {{ mov.type === 'ENTRY' ? 'ENTRADA' : 'SALIDA' }}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase">
+              {{ mov.operator || 'Desconocido' }}
+            </td>
+            <td class="px-6 py-4 text-right font-bold" [class]="mov.type === 'ENTRY' ? 'text-green-600' : 'text-red-600'">
+              {{ mov.type === 'ENTRY' ? '+' : '-' }}{{ mov.quantity }}
+            </td>
+            <td class="px-6 py-4 text-right text-sm text-slate-600">{{ mov.unit_cost | currency:'S/ ' }}</td>
+            <td class="px-6 py-4 text-right font-medium">{{ mov.total_cost | currency:'S/ ' }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="px-6 py-12 text-center text-slate-400">No hay movimientos registrados.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
