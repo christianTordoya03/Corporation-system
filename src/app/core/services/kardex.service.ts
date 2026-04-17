@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject, NgZone } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Movement, Product, User, Customer } from '../models/kardex.model'; // <-- Asegúrate de importar Customer
+import { Movement, Product, User, Customer } from '../models/kardex.model'; 
 import { environment } from '../../../environment/environment';
 
 @Injectable({
@@ -10,21 +10,31 @@ export class KardexService {
   private supabase: SupabaseClient;
   private zone = inject(NgZone); 
   
-  // --- AUTENTICACIÓN ---
-  currentUser = signal<User | null>(null);
+  // --- AUTENTICACIÓN CON PERSISTENCIA ---
+  // Al inicializar la señal, intentamos cargar al usuario desde localStorage
+  currentUser = signal<User | null>(this.getUserFromStorage());
   
+  private getUserFromStorage(): User | null {
+    const savedUser = localStorage.getItem('gra_user_session');
+    return savedUser ? JSON.parse(savedUser) : null;
+  }
+
   login(user: User) {
+    // Guardamos en localStorage para que sobreviva al F5 (Refresh)
+    localStorage.setItem('gra_user_session', JSON.stringify(user));
     this.currentUser.set(user);
   }
 
   logout() {
+    // Limpiamos el almacenamiento al salir
+    localStorage.removeItem('gra_user_session');
     this.currentUser.set(null);
   }
 
   // --- ESTADO PRINCIPAL (Signals) ---
   products = signal<Product[]>([]);
   movements = signal<Movement[]>([]);
-  customers = signal<Customer[]>([]); // <-- Signal para el directorio de clientes
+  customers = signal<Customer[]>([]); 
   isLoading = signal<boolean>(false);
 
   // --- ESTADO UI ---
@@ -55,19 +65,26 @@ export class KardexService {
   totalVentas = computed(() => 
     this.movements()
       .filter(m => m.type === 'EXIT')
-      .reduce((acc, m) => acc + Number(m.total_cost || 0), 0)
+      .reduce((acc, m) => acc + Number(m.subtotal || m.total_cost || 0), 0)
+  );
+
+  totalFacturadoConIgv = computed(() => 
+    this.movements()
+      .filter(m => m.type === 'EXIT')
+      .reduce((acc, m) => acc + Number(m.total_invoice || m.total_cost || 0), 0)
   );
 
   totalUtilidad = computed(() => 
     this.movements()
       .filter(m => m.type === 'EXIT')
       .reduce((acc, m) => {
-        const ingresoVenta = Number(m.total_cost || 0); 
-        // Se calcula la utilidad restando al ingreso de venta, el costo original del producto
+        const ingresoNeto = Number(m.subtotal || m.total_cost || 0); 
         const costoReal = Number(m.quantity) * Number((m as any).baseCost || 0); 
-        return acc + (ingresoVenta - costoReal);
+        return acc + (ingresoNeto - costoReal);
       }, 0)
   );
+
+  flujoCaja = computed(() => this.totalVentas() - this.totalInversion());
 
   constructor() {
     this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
@@ -78,14 +95,12 @@ export class KardexService {
   async loadInitialData() {
     this.isLoading.set(true);
     try {
-      // 1. Cargar Productos
       const { data: prods, error: errProds } = await this.supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
       if (errProds) throw errProds;
       
-      // 2. Cargar Movimientos (Incluyendo costo base para utilidad)
       const { data: movs, error: errMovs } = await this.supabase
         .from('movements')
         .select('*, products(code, unit_price)') 
@@ -99,18 +114,16 @@ export class KardexService {
         baseCost: m.products?.unit_price 
       }));
 
-      // 3. Cargar Clientes (NUEVO)
       const { data: custs, error: errCusts } = await this.supabase
         .from('customers')
         .select('*')
         .order('name', { ascending: true });
       if (errCusts) throw errCusts;
 
-      // FORZAMOS LA ACTUALIZACIÓN DENTRO DE LA ZONA DE ANGULAR
       this.zone.run(() => {
         this.products.set(prods || []);
         this.movements.set(formattedMovs || []);
-        this.customers.set(custs || []); // <-- Guardamos los clientes en el estado
+        this.customers.set(custs || []);
       });
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -177,6 +190,7 @@ export class KardexService {
   closeMovementModal() {
     this.activeProduct.set(null);
   }
+
   // --- GESTIÓN DE CLIENTES ---
   async addCustomer(name: string, address?: string): Promise<string | null> {
     try {
@@ -187,11 +201,10 @@ export class KardexService {
         .single();
       if (error) throw error;
       
-      // Actualizamos la lista local y la ordenamos alfabéticamente
       this.zone.run(() => {
         this.customers.update(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
       });
-      return data.id; // Devolvemos el ID para usarlo en el movimiento
+      return data.id;
     } catch (error) {
       console.error('Error al guardar cliente:', error);
       alert('Error al guardar el nuevo cliente.');
@@ -199,12 +212,12 @@ export class KardexService {
     }
   }
 
-  // AHORA RECIBE LOS DATOS LOGÍSTICOS OPCIONALES
   async processMovement(
     reference: string, 
     quantity: number, 
     unit_cost: number,
-    logisticData?: { customer_id?: string, truck_plate?: string, driver_name?: string }
+    logisticData?: any,
+    financialData?: any
   ) {
     const product = this.activeProduct();
     const type = this.movementType();
@@ -212,7 +225,6 @@ export class KardexService {
     if (!product) return;
 
     try {
-      // Preparamos el objeto a insertar combinando los datos básicos con los logísticos
       const movementPayload = {
         product_id: product.id,
         type,
@@ -222,7 +234,20 @@ export class KardexService {
         operator,
         customer_id: logisticData?.customer_id || null,
         truck_plate: logisticData?.truck_plate?.toUpperCase() || null,
-        driver_name: logisticData?.driver_name || null
+        driver_name: logisticData?.driver_name || null,
+        oc_date: logisticData?.oc_date || null,
+        remission_guide: logisticData?.remission_guide || null,
+        remission_date: logisticData?.remission_date || null,
+        delivery_date: logisticData?.delivery_date || null,
+        proceso: logisticData?.proceso || null,
+        invoice_number: logisticData?.invoice_number || null,
+        invoice_date: logisticData?.invoice_date || null,
+        subtotal: financialData?.subtotal || null,
+        igv_amount: financialData?.igv || null,
+        total_invoice: financialData?.totalFactura || null,
+        retention_amount: financialData?.retencion || null,
+        detraction_pct: financialData?.detraction_pct || null,
+        detraction_amount: financialData?.detraccion || null
       };
 
       const { data: movData, error: movError } = await this.supabase

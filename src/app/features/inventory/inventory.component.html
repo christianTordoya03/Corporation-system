@@ -1,21 +1,19 @@
 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+  
   <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
     <div class="relative w-full md:w-96">
       <input type="text" [value]="searchQuery()" (input)="updateSearch($event)"
         placeholder="Buscar por código o nombre..."
-        class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
-      <svg class="absolute left-3 top-2.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-        stroke-linejoin="round">
+        class="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-slate-100 focus:ring-0 focus:border-purple-600 outline-none transition-all bg-slate-50 focus:bg-white text-slate-700 font-medium" />
+      <svg class="absolute left-3 top-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8" />
         <path d="m21 21-4.3-4.3" />
       </svg>
     </div>
 
     <button (click)="openNewProductForm()"
-      class="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-700 transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      class="bg-purple-700 text-white px-5 py-3 rounded-xl flex items-center gap-2 font-bold hover:bg-purple-800 transition-all shadow-lg shadow-purple-700/20">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M5 12h14" />
         <path d="M12 5v14" />
       </svg>
@@ -24,35 +22,29 @@
   </div>
 
   @if (showForm()) {
-  <div class="p-6 bg-slate-50 border-b border-slate-100">
+  <div class="p-6 bg-purple-50/50 border-b border-slate-100 shadow-inner">
     <form [formGroup]="productForm" (ngSubmit)="saveProduct()" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Código (SKU)</label>
-        <input formControlName="code" class="w-full p-2 border border-slate-300 rounded-lg text-sm"
-          placeholder="PAR-001">
+        <input formControlName="code" class="w-full p-2.5 border-2 border-slate-200 rounded-xl text-sm font-semibold outline-none focus:border-purple-600 bg-white" placeholder="PAR-001">
       </div>
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre</label>
-        <input formControlName="name" class="w-full p-2 border border-slate-300 rounded-lg text-sm"
-          placeholder="Parihuela Pino">
+        <input formControlName="name" class="w-full p-2.5 border-2 border-slate-200 rounded-xl text-sm font-semibold outline-none focus:border-purple-600 bg-white" placeholder="Parihuela Pino">
       </div>
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Precio Unit. (Costo)</label>
-        <input type="number" formControlName="unit_price" class="w-full p-2 border border-slate-300 rounded-lg text-sm">
+        <input type="number" formControlName="unit_price" class="w-full p-2.5 border-2 border-slate-200 rounded-xl text-sm font-semibold outline-none focus:border-purple-600 bg-white">
       </div>
       <div class="flex items-end gap-2">
         <div class="flex-1">
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Stock Min.</label>
-          <input type="number" formControlName="min_stock"
-            class="w-full p-2 border border-slate-300 rounded-lg text-sm">
+          <input type="number" formControlName="min_stock" class="w-full p-2.5 border-2 border-slate-200 rounded-xl text-sm font-semibold outline-none focus:border-purple-600 bg-white">
         </div>
-        <button type="submit" [disabled]="!productForm.valid"
-          class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold disabled:opacity-50">
+        <button type="submit" [disabled]="!productForm.valid" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold disabled:opacity-50 hover:bg-emerald-700 transition-colors shadow-sm">
           {{ editingProductId() ? 'Actualizar' : 'Guardar' }}
         </button>
-
-        <button type="button" (click)="showForm.set(false)"
-          class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold hover:bg-slate-300">
+        <button type="button" (click)="showForm.set(false)" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-300 transition-colors">
           Cancelar
         </button>
       </div>
@@ -61,126 +53,109 @@
   }
 
   <div class="overflow-x-auto">
-    <table class="w-full text-left border-collapse">
+    <table class="w-full border-collapse min-w-[800px]">
       <thead>
         <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-bold tracking-wider">
           <th class="px-6 py-4">Código</th>
           <th class="px-6 py-4">Producto</th>
-          <th class="px-6 py-4">Stock Actual</th>
-          <th class="px-6 py-4">Valor Stock</th>
-          <th class="px-6 py-4">Estado</th>
-          <th class="px-6 py-4 text-center">Acciones</th>
+          <th class="px-6 py-4 text-center">Stock Actual</th>
+          <th class="px-6 py-4 text-center">Valor Stock</th>
+          <th class="px-6 py-4 text-center">Estado</th>
+          <th class="px-6 py-4 text-center">Operaciones</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100">
         @for (prod of filteredProducts(); track prod.id) {
         <tr class="hover:bg-slate-50/50 transition-colors">
-          <td class="px-6 py-4 font-mono text-sm text-slate-600">{{ prod.code }}</td>
+          <td class="px-6 py-4 font-mono text-sm font-bold text-slate-600">{{ prod.code }}</td>
           <td class="px-6 py-4">
-            <div class="font-bold text-slate-800">{{ prod.name }}</div>
-            <div class="text-xs text-slate-400">{{ prod.category }}</div>
+            <div class="font-bold text-slate-800 text-base">{{ prod.name }}</div>
+            <div class="text-xs font-semibold text-slate-400 mt-0.5">Costo Base: {{ prod.unit_price | currency:'S/ ' }}</div>
           </td>
-          <td class="px-6 py-4">
-            <span class="text-lg font-bold">{{ prod.current_stock }}</span>
-            <span class="text-xs text-slate-400 ml-1">unid.</span>
+          <td class="px-6 py-4 text-center">
+            <span class="text-xl font-black text-slate-800">{{ prod.current_stock }}</span>
+            <span class="text-xs font-bold text-slate-400 ml-1">unid.</span>
           </td>
-          <td class="px-6 py-4 font-medium text-slate-700">
+          <td class="px-6 py-4 text-center font-bold text-slate-700">
             {{ (prod.current_stock * prod.unit_price) | currency:'S/ ' }}
           </td>
-          <td class="px-6 py-4">
-            @if (prod.current_stock <= prod.min_stock) { <span
-              class="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold rounded-full uppercase">Crítico</span>
-              } @else if (prod.current_stock <= prod.min_stock * 2) { <span
-                class="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase">
-                Reponer</span>
-                } @else {
-                <span
-                  class="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full uppercase">Óptimo</span>
-                }
+          <td class="px-6 py-4 text-center">
+            @if (prod.current_stock <= prod.min_stock) { 
+              <span class="px-3 py-1.5 bg-red-100 text-red-700 text-[10px] font-black rounded-full uppercase border border-red-200">Crítico</span>
+            } @else if (prod.current_stock <= prod.min_stock * 2) { 
+              <span class="px-3 py-1.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase border border-amber-200">Reponer</span>
+            } @else {
+              <span class="px-3 py-1.5 bg-green-100 text-green-700 text-[10px] font-black rounded-full uppercase border border-green-200">Óptimo</span>
+            }
           </td>
 
-          <td class="px-6 py-4 text-center">
-            <div class="flex justify-center gap-1">
+          <td class="px-6 py-4">
+            <div class="flex items-center justify-center gap-2">
+              
               <button (click)="triggerMovement(prod, 'ENTRY')"
-                class="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-600 hover:text-white" title="Entrada">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                class="flex items-center gap-1.5 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-700 hover:text-white transition-all font-bold text-xs shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 5v14" />
                   <path d="m19 12-7 7-7-7" />
                 </svg>
+                ENTRADA
               </button>
 
               <button (click)="triggerMovement(prod, 'EXIT')"
-                class="bg-orange-50 text-orange-600 p-2 rounded-lg hover:bg-orange-600 hover:text-white"
-                title="Salida (Pedido)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-600 hover:text-white transition-all font-bold text-xs shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 19V5" />
                   <path d="m5 12 7-7 7 7" />
                 </svg>
+                SALIDA
               </button>
 
-              <button (click)="editProduct(prod)"
-                class="bg-slate-100 text-slate-600 p-2 rounded-lg hover:bg-slate-600 hover:text-white"
-                title="Editar Producto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                </svg>
+              <div class="w-px h-8 bg-slate-200 mx-1"></div>
+
+              <button (click)="editProduct(prod)" class="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-blue-300 hover:bg-blue-50 transition-all" title="Editar Producto">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
               </button>
 
-              <button (click)="confirmDelete(prod)"
-                class="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-600 hover:text-white"
-                title="Eliminar Producto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 6h18" />
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                </svg>
+              <button (click)="confirmDelete(prod)" class="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-red-300 hover:bg-red-50 transition-all" title="Eliminar Producto">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
               </button>
+
             </div>
           </td>
         </tr>
         } @empty {
         <tr>
-          <td colspan="6" class="px-6 py-12 text-center text-slate-400">No se encontraron productos en el inventario.
+          <td colspan="6" class="px-6 py-16 text-center">
+            <div class="flex flex-col items-center justify-center">
+              <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+              </div>
+              <p class="text-slate-500 font-medium">No se encontraron productos en el inventario.</p>
+            </div>
           </td>
         </tr>
         }
       </tbody>
     </table>
   </div>
+
   @if (productToDelete()) {
   <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform transition-all">
       <div class="p-6 text-center">
         <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18" />
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            <line x1="10" y1="11" x2="10" y2="17" />
-            <line x1="14" y1="11" x2="14" y2="17" />
-          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
         </div>
-
         <h3 class="font-bold text-lg text-slate-800 mb-2">¿Eliminar Producto?</h3>
-
         <p class="text-slate-500 text-sm mb-6">
           Estás a punto de eliminar <strong>{{ productToDelete()?.name }}</strong>.
-          Esta acción también <span class="text-red-600 font-semibold">eliminará de forma permanente todo su historial
-            de movimientos</span>.
+          Esta acción también <span class="text-red-600 font-semibold">eliminará de forma permanente todo su historial de movimientos</span>.
         </p>
-
         <div class="flex gap-3">
-          <button (click)="cancelDelete()"
-            class="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors">
+          <button (click)="cancelDelete()" class="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors">
             Cancelar
           </button>
-          <button (click)="executeDelete()"
-            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors shadow-sm shadow-red-200">
+          <button (click)="executeDelete()" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-sm shadow-red-200">
             Sí, eliminar
           </button>
         </div>

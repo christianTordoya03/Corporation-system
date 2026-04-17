@@ -35,21 +35,61 @@ export class DashboardComponent implements AfterViewInit, OnDestroy {
   dashLowStock = computed(() => this.filteredProducts().filter(p => p.current_stock <= p.min_stock).length);
   dashTotalItems = computed(() => this.filteredProducts().reduce((acc, p) => acc + p.current_stock, 0));
 
-  dashInversion = computed(() => this.filteredMovements().filter(m => m.type === 'ENTRY').reduce((acc, m) => acc + Number(m.total_cost || 0), 0));
-  dashVentas = computed(() => this.filteredMovements().filter(m => m.type === 'EXIT').reduce((acc, m) => acc + Number(m.total_cost || 0), 0));
-  dashUtilidad = computed(() => this.filteredMovements().filter(m => m.type === 'EXIT').reduce((acc, m) => {
-    const ingresoVenta = Number(m.total_cost || 0); 
-    const costoReal = Number(m.quantity) * Number((m as any).baseCost || 0); 
-    return acc + (ingresoVenta - costoReal);
-  }, 0));
+  dashInversion = computed(() => 
+    this.filteredMovements()
+      .filter(m => m.type === 'ENTRY')
+      .reduce((acc, m) => acc + Number(m.total_cost || 0), 0)
+  );
+
+  dashVentas = computed(() => 
+    this.filteredMovements()
+      .filter(m => m.type === 'EXIT')
+      .reduce((acc, m) => acc + Number(m.subtotal || m.total_cost || 0), 0)
+  );
+
+  dashFacturado = computed(() => 
+    this.filteredMovements()
+      .filter(m => m.type === 'EXIT')
+      .reduce((acc, m) => acc + Number(m.total_invoice || m.total_cost || 0), 0)
+  );
+
+  dashIgv = computed(() => 
+    this.filteredMovements()
+      .filter(m => m.type === 'EXIT')
+      .reduce((acc, m) => acc + Number(m.igv_amount || 0), 0)
+  );
+
+  dashUtilidad = computed(() => 
+    this.filteredMovements()
+      .filter(m => m.type === 'EXIT')
+      .reduce((acc, m) => {
+        const ingreso = Number(m.subtotal || m.total_cost || 0); 
+        const costo = Number(m.quantity) * Number((m as any).baseCost || 0); 
+        return acc + (ingreso - costo);
+      }, 0)
+  );
+
+  dashFlujoNeto = computed(() => this.dashVentas() - this.dashInversion());
 
   constructor() {
     effect(() => {
       const inversion = this.dashInversion();
-      const ventas = this.dashVentas();
+      const ventasNetas = this.dashVentas();
       const utilidad = this.dashUtilidad();
+      const igv = this.dashIgv();
+      const facturado = this.dashFacturado();
+
       if (this.chart) {
-        this.chart.data.datasets[0].data = [inversion, ventas, utilidad];
+        // Actualizamos labels y datos para incluir el flujo completo
+        this.chart.data.labels = ['Inversión', 'Venta Neta', 'IGV', 'Facturado', 'Utilidad'];
+        this.chart.data.datasets[0].data = [inversion, ventasNetas, igv, facturado, utilidad];
+        this.chart.data.datasets[0].backgroundColor = [
+          'rgba(59, 130, 246, 0.9)', // Azul
+          'rgba(16, 185, 129, 0.8)', // Verde
+          'rgba(239, 68, 68, 0.85)', // Rojo
+          'rgba(30, 41, 59, 0.9)',   // Pizarra
+          'rgba(245, 158, 11, 0.9)'  // Ámbar
+        ];
         this.chart.update();
       }
     });
@@ -69,131 +109,148 @@ export class DashboardComponent implements AfterViewInit, OnDestroy {
     const wb = XLSX.utils.book_new();
     const ws_data: any[] = [];
 
-    // --- Definición de Estilos ---
     const s_title = { font: { bold: true, size: 16, color: { rgb: "1E293B" } }, alignment: { horizontal: "center" } };
     const s_date = { font: { size: 10, color: { rgb: "64748B" } }, alignment: { horizontal: "center" } };
     const base_box = { font: { bold: true, color: { rgb: "FFFFFF" } }, alignment: { horizontal: "center", vertical: "center" } };
     
-    // Colores corporativos G.R.A.
-    const s_box_inv = { ...base_box, fill: { fgColor: { rgb: "7E22CE" } }, font: { bold: true, size: 14, color: { rgb: "FFFFFF" } } };
-    const s_box_inv_title = { ...base_box, fill: { fgColor: { rgb: "6B21A8" } }, font: { size: 10, color: { rgb: "F3E8FF" } } };
-    const s_box_ven = { ...base_box, fill: { fgColor: { rgb: "22C55E" } }, font: { bold: true, size: 14, color: { rgb: "FFFFFF" } } };
-    const s_box_ven_title = { ...base_box, fill: { fgColor: { rgb: "16A34A" } }, font: { size: 10, color: { rgb: "DCFCE7" } } };
-    const s_box_util = { ...base_box, fill: { fgColor: { rgb: "F59E0B" } }, font: { bold: true, size: 14, color: { rgb: "FFFFFF" } } };
-    const s_box_util_title = { ...base_box, fill: { fgColor: { rgb: "D97706" } }, font: { size: 10, color: { rgb: "FEF3C7" } } };
+    // Estilos por Bloque (Orden Solicitado)
+    const s_box_inv = { ...base_box, fill: { fgColor: { rgb: "3B82F6" } } };
+    const s_box_inv_t = { ...s_box_inv, font: { size: 9, bold: true, color: { rgb: "DBEAFE" } } };
 
-    // Estilo para encabezado de tabla detallada
+    const s_box_ven = { ...base_box, fill: { fgColor: { rgb: "10B981" } } };
+    const s_box_ven_t = { ...s_box_ven, font: { size: 9, bold: true, color: { rgb: "D1FAE5" } } };
+
+    const s_box_igv = { ...base_box, fill: { fgColor: { rgb: "EF4444" } } };
+    const s_box_igv_t = { ...s_box_igv, font: { size: 9, bold: true, color: { rgb: "FEE2E2" } } };
+
+    const s_box_fac = { ...base_box, fill: { fgColor: { rgb: "1E293B" } } };
+    const s_box_fac_t = { ...s_box_fac, font: { size: 9, bold: true, color: { rgb: "CBD5E1" } } };
+
+    const s_box_flu = { ...base_box, fill: { fgColor: { rgb: "06B6D4" } } };
+    const s_box_flu_t = { ...s_box_flu, font: { size: 9, bold: true, color: { rgb: "CFFAFE" } } };
+
+    const s_box_util = { ...base_box, fill: { fgColor: { rgb: "F59E0B" } } };
+    const s_box_util_t = { ...s_box_util, font: { size: 9, bold: true, color: { rgb: "FEF3C7" } } };
+
     const s_header = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "334155" } }, alignment: { horizontal: "center", vertical: "center" } };
     const s_cell_border = { border: { bottom: { style: "thin", color: { rgb: "E2E8F0" } } } };
 
-    // 1. Título y Fecha
-    ws_data.push([{ v: "G.R.A. GRUPO CORPORATIVO - REPORTE GERENCIAL", s: s_title }]);
+    ws_data.push([{ v: "G.R.A. GRUPO CORPORATIVO - REPORTE GERENCIAL INTEGRAL", s: s_title }]);
     const fechaText = `Generado el: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
     ws_data.push([{ v: fechaText, s: s_date }]);
     ws_data.push([]); 
 
-    // 2. Cuadros Financieros Globales
+    // 2. Bloques de Resumen en el ORDEN SOLICITADO (6 bloques, 12 columnas)
     ws_data.push([
-      { v: "INVERSIÓN GLOBAL (COMPRAS)", s: s_box_inv_title }, null, 
-      { v: "VENTAS GLOBALES (INGRESOS)", s: s_box_ven_title }, null,
-      { v: "UTILIDAD NETA GLOBAL", s: s_box_util_title }, null, null
+      { v: "INVERSIÓN", s: s_box_inv_t }, null, 
+      { v: "VENTA NETA", s: s_box_ven_t }, null,
+      { v: "IGV TOTAL (SUNAT)", s: s_box_igv_t }, null,
+      { v: "TOTAL FACTURADO", s: s_box_fac_t }, null,
+      { v: "FLUJO NETO REAL", s: s_box_flu_t }, null,
+      { v: "UTILIDAD NETA", s: s_box_util_t }, null
     ]);
     
-    // Convertimos a texto con formato solo para las cajas superiores
     const fmt = (val: number) => this.currencyPipe.transform(val, 'S/ ') || 'S/ 0.00';
     ws_data.push([
-      { v: fmt(this.dashInversion()), s: s_box_inv }, null,
-      { v: fmt(this.dashVentas()), s: s_box_ven }, null,
-      { v: fmt(this.dashUtilidad()), s: s_box_util }, null, null
+      { v: fmt(this.dashInversion()), s: { ...s_box_inv, font: { size: 14, bold: true, color: { rgb: "FFFFFF" } } } }, null,
+      { v: fmt(this.dashVentas()), s: { ...s_box_ven, font: { size: 14, bold: true, color: { rgb: "FFFFFF" } } } }, null,
+      { v: fmt(this.dashIgv()), s: { ...s_box_igv, font: { size: 14, bold: true, color: { rgb: "FFFFFF" } } } }, null,
+      { v: fmt(this.dashFacturado()), s: { ...s_box_fac, font: { size: 14, bold: true, color: { rgb: "FFFFFF" } } } }, null,
+      { v: fmt(this.dashFlujoNeto()), s: { ...s_box_flu, font: { size: 14, bold: true, color: { rgb: "FFFFFF" } } } }, null,
+      { v: fmt(this.dashUtilidad()), s: { ...s_box_util, font: { size: 14, bold: true, color: { rgb: "FFFFFF" } } } }, null
     ]);
     
     ws_data.push([]); ws_data.push([]);
 
-    // 3. NUEVO: Tabla de Desglose Analítico por Producto
-    ws_data.push([{ v: "DESGLOSE FÍSICO Y FINANCIERO POR PRODUCTO", s: { font: { bold: true, size: 12, color: { rgb: "1E293B" } } } }]);
+    // 3. Desglose Analítico con el mismo orden
+    ws_data.push([{ v: "DESGLOSE ANALÍTICO POR PRODUCTO", s: { font: { bold: true, size: 12, color: { rgb: "1E293B" } } } }]);
     ws_data.push([
       { v: "CÓDIGO", s: s_header },
       { v: "PRODUCTO", s: s_header },
-      { v: "STOCK ACT.", s: s_header },
-      { v: "ESTADO", s: s_header },
-      { v: "INVERSIÓN (S/)", s: s_header },
-      { v: "VENTAS (S/)", s: s_header },
-      { v: "UTILIDAD (S/)", s: s_header }
+      { v: "STOCK", s: s_header },
+      { v: "INVERSIÓN", s: s_header },
+      { v: "VENTA NETA", s: s_header },
+      { v: "IGV", s: s_header },
+      { v: "FACTURADO", s: s_header },
+      { v: "UTILIDAD", s: s_header }
     ]);
 
-    // Recorremos producto por producto calculando sus métricas individuales
     this.filteredProducts().forEach(p => {
-      let estado = 'Óptimo';
-      let colorEstado = "16A34A"; // Verde
-      if(p.current_stock <= p.min_stock) {
-        estado = 'Crítico';
-        colorEstado = "DC2626"; // Rojo
-      } else if(p.current_stock <= p.min_stock * 2) {
-        estado = 'Reponer';
-        colorEstado = "D97706"; // Ambar
-      }
-
-      // Filtramos solo los movimientos de ESTE producto
       const pMovs = this.filteredMovements().filter(m => m.product_id === p.id);
-      
-      // Calculamos finanzas individuales
       const pInv = pMovs.filter(m => m.type === 'ENTRY').reduce((acc, m) => acc + Number(m.total_cost || 0), 0);
-      const pVen = pMovs.filter(m => m.type === 'EXIT').reduce((acc, m) => acc + Number(m.total_cost || 0), 0);
+      const pVen = pMovs.filter(m => m.type === 'EXIT').reduce((acc, m) => acc + Number(m.subtotal || m.total_cost || 0), 0);
+      const pIgv = pMovs.filter(m => m.type === 'EXIT').reduce((acc, m) => acc + Number(m.igv_amount || 0), 0);
+      const pFac = pMovs.filter(m => m.type === 'EXIT').reduce((acc, m) => acc + Number(m.total_invoice || m.total_cost || 0), 0);
       const pUtil = pMovs.filter(m => m.type === 'EXIT').reduce((acc, m) => {
-        const ingreso = Number(m.total_cost || 0);
+        const ingreso = Number(m.subtotal || m.total_cost || 0);
         const costo = Number(m.quantity) * Number((m as any).baseCost || 0);
         return acc + (ingreso - costo);
       }, 0);
 
       ws_data.push([
-        { v: p.code, s: { ...s_cell_border, font: { name: "Courier New" }, alignment: { horizontal: "center" } } },
+        { v: p.code, s: { ...s_cell_border, alignment: { horizontal: "center" } } },
         { v: p.name, s: { ...s_cell_border } },
         { v: p.current_stock, s: { ...s_cell_border, alignment: { horizontal: "center" }, font: { bold: true } } },
-        { v: estado, s: { ...s_cell_border, alignment: { horizontal: "center" }, font: { color: { rgb: colorEstado }, bold: true } } },
-        { v: pInv, s: { ...s_cell_border, alignment: { horizontal: "right" }, z: '"S/" #,##0.00' } }, // Formato nativo Excel
-        { v: pVen, s: { ...s_cell_border, alignment: { horizontal: "right" }, z: '"S/" #,##0.00' } },
+        { v: pInv, s: { ...s_cell_border, alignment: { horizontal: "right" }, z: '"S/" #,##0.00' } }, 
+        { v: pVen, s: { ...s_cell_border, alignment: { horizontal: "right" }, z: '"S/" #,##0.00' } }, 
+        { v: pIgv, s: { ...s_cell_border, alignment: { horizontal: "right" }, z: '"S/" #,##0.00' } }, 
+        { v: pFac, s: { ...s_cell_border, alignment: { horizontal: "right" }, z: '"S/" #,##0.00' } }, 
         { v: pUtil, s: { ...s_cell_border, alignment: { horizontal: "right" }, font: { bold: true }, z: '"S/" #,##0.00' } }
       ]);
     });
 
-    // 4. Generar la hoja y configurar anchos/combinaciones
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
+    // Merges para 12 columnas (6 bloques de 2 celdas cada uno)
     ws['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // Título principal (A1:G1)
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } }, // Fecha (A2:G2)
-      { s: { r: 3, c: 0 }, e: { r: 3, c: 1 } }, { s: { r: 4, c: 0 }, e: { r: 4, c: 1 } }, // Caja Inversión
-      { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } }, { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } }, // Caja Ventas
-      { s: { r: 3, c: 4 }, e: { r: 3, c: 6 } }, { s: { r: 4, c: 4 }, e: { r: 4, c: 6 } }  // Caja Utilidad
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } }, 
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }, 
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 1 } }, { s: { r: 4, c: 0 }, e: { r: 4, c: 1 } }, // Inversión
+      { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } }, { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } }, // Venta Neta
+      { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } }, { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } }, // IGV
+      { s: { r: 3, c: 6 }, e: { r: 3, c: 7 } }, { s: { r: 4, c: 6 }, e: { r: 4, c: 7 } }, // Facturado
+      { s: { r: 3, c: 8 }, e: { r: 3, c: 9 } }, { s: { r: 4, c: 8 }, e: { r: 4, c: 9 } }, // Flujo
+      { s: { r: 3, c: 10 }, e: { r: 3, c: 11 } }, { s: { r: 4, c: 10 }, e: { r: 4, c: 11 } } // Utilidad
     ];
 
     ws['!cols'] = [
-      { wch: 15 }, // Codigo
-      { wch: 25 }, // Producto
-      { wch: 12 }, // Stock
-      { wch: 12 }, // Estado
-      { wch: 18 }, // Inversion
-      { wch: 18 }, // Ventas
-      { wch: 18 }  // Utilidad
+      { wch: 12 }, { wch: 25 }, { wch: 10 }, { wch: 15 }, 
+      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 } 
     ];
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Resumen Gerencial');
-    XLSX.writeFile(wb, `Reporte_Estadístico_${new Date().getTime()}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'Dashboard Integral');
+    XLSX.writeFile(wb, `Reporte_Ejecutivo_GRA_${new Date().getTime()}.xlsx`);
   }
 
-  ngAfterViewInit() { setTimeout(() => { this.initChart(); }, 50); }
+  ngAfterViewInit() { 
+    setTimeout(() => { this.initChart(); }, 150); 
+  }
 
   initChart() {
     if (this.chart) { this.chart.destroy(); }
     const ctx = this.chartRef.nativeElement.getContext('2d');
+    
+    // Carga inicial forzada de valores actuales
+    const inv = this.dashInversion();
+    const ven = this.dashVentas();
+    const igv = this.dashIgv();
+    const fac = this.dashFacturado();
+    const uti = this.dashUtilidad();
+
     this.chart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['Inversión (S/)', 'Ventas (S/)', 'Utilidad Neta (S/)'],
+        labels: ['Inversión', 'Venta Neta', 'IGV', 'Facturado', 'Utilidad'],
         datasets: [{
-          label: 'Monto Acumulado',
-          data: [this.dashInversion(), this.dashVentas(), this.dashUtilidad()],
-          backgroundColor: ['rgba(126, 34, 206, 0.9)', 'rgba(34, 197, 94, 0.8)', 'rgba(245, 158, 11, 0.9)'],
+          label: 'Monto Acumulado (S/)',
+          data: [inv, ven, igv, fac, uti],
+          backgroundColor: [
+            'rgba(59, 130, 246, 0.9)', 
+            'rgba(16, 185, 129, 0.8)', 
+            'rgba(239, 68, 68, 0.85)',
+            'rgba(30, 41, 59, 0.9)',
+            'rgba(245, 158, 11, 0.9)'
+          ], 
           borderRadius: 6, borderSkipped: false
         }]
       },
