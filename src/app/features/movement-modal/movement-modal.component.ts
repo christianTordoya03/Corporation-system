@@ -37,7 +37,7 @@ export class MovementModalComponent {
     remission_guide: [''],
     remission_date: [''],
     delivery_date: [''],
-    proceso: [''], // NUEVO: Tratamiento Técnico
+    proceso: [''], 
     invoice_number: [''],
     invoice_date: [''],
 
@@ -46,36 +46,37 @@ export class MovementModalComponent {
   });
 
   constructor() {
-    // Sincronizar formulario cuando se abre el modal para un producto
+    // SINCRONIZACIÓN CON ÓRDENES DE COMPRA (OC)
     effect(() => {
       const product = this.kardex.activeProduct();
       const type = this.kardex.movementType();
+      const activeOC = this.kardex.activePurchaseOrder(); // Detectamos si hay una OC vinculada
       
       if (product) {
+        // Habilitamos los campos por defecto antes del reset
+        this.movementForm.get('customer_id')?.enable();
+        this.movementForm.get('reference')?.enable();
+
         this.movementForm.reset({
           unitCost: product.unit_price,
           quantity: 1,
-          reference: type === 'ENTRY' ? 'FABRICADO' : '',
-          customer_id: '',
-          truck_plate: '',
-          driver_name: '',
-          newCustomerName: '',
-          newCustomerAddress: '',
-          oc_date: '',
-          remission_guide: '',
-          remission_date: '',
-          delivery_date: '',
-          proceso: '', // Reset del nuevo campo
-          invoice_number: '',
-          invoice_date: '',
+          reference: activeOC ? activeOC.oc_number : (type === 'ENTRY' ? 'FABRICADO' : ''),
+          customer_id: activeOC ? activeOC.customer_id : '',
+          proceso: '',
           apply_retention: false,
           detraction_pct: 0
         });
+
+        // Bloqueamos los campos si el despacho es por una OC específica
+        if (activeOC) {
+          this.movementForm.get('customer_id')?.disable();
+          this.movementForm.get('reference')?.disable();
+        }
+        
         this.isNewCustomer.set(false); 
       }
     });
 
-    // Escuchar cambios para actualizar el resumen de facturación en tiempo real
     this.movementForm.valueChanges.subscribe(vals => {
       this.calcSubtotal = (vals.quantity || 0) * (vals.unitCost || 0);
       this.calcIgv = this.calcSubtotal * 0.18; 
@@ -91,11 +92,10 @@ export class MovementModalComponent {
   }
 
   async submitMovement() {
-    if (this.movementForm.valid) {
-      const formVals = this.movementForm.value;
+    if (this.movementForm.valid || this.movementForm.disabled) { // Consideramos el estado disabled por la OC
+      const formVals = this.movementForm.getRawValue(); // getRawValue para obtener campos disabled
       let finalCustomerId = formVals.customer_id;
 
-      // Registro rápido de cliente si es nuevo
       if (this.kardex.movementType() === 'EXIT' && this.isNewCustomer()) {
         if (!formVals.newCustomerName?.trim()) {
           alert('El nombre de la empresa es obligatorio.');
@@ -106,7 +106,6 @@ export class MovementModalComponent {
         finalCustomerId = newId;
       }
 
-      // Preparar data logística
       const logisticData = this.kardex.movementType() === 'EXIT' 
         ? { 
             customer_id: finalCustomerId || undefined, 
@@ -116,13 +115,12 @@ export class MovementModalComponent {
             remission_guide: formVals.remission_guide || undefined,
             remission_date: formVals.remission_date || undefined,
             delivery_date: formVals.delivery_date || undefined,
-            proceso: formVals.proceso || undefined, // ENVÍO DEL NUEVO CAMPO
+            proceso: formVals.proceso || undefined,
             invoice_number: formVals.invoice_number || undefined,
             invoice_date: formVals.invoice_date || undefined
           } 
         : undefined;
 
-      // Preparar data financiera
       const financialData = this.kardex.movementType() === 'EXIT' 
         ? {
             subtotal: this.calcSubtotal,
@@ -141,9 +139,6 @@ export class MovementModalComponent {
         logisticData, 
         financialData
       );
-      
-      this.movementForm.reset();
-      this.isNewCustomer.set(false);
     }
   }
 }

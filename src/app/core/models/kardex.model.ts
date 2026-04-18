@@ -20,10 +20,23 @@ export interface Product {
   unit_price: number;
 }
 
+export interface PurchaseOrder {
+  id: string;
+  customer_id: string;
+  product_id: string;
+  oc_number: string;
+  total_quantity: number;
+  delivered_quantity: number;
+  status: 'OPEN' | 'CLOSED';
+  created_at: Date;
+  product_name?: string; // Para visualización
+}
+
 export interface Movement {
   id?: string;
   date?: Date;
   product_id: string; // Relación fuerte
+  purchase_order_id?: string;
   productCode?: string;
   type: 'ENTRY' | 'EXIT';
   quantity: number;

@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject, NgZone } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Movement, Product, User, Customer } from '../models/kardex.model'; 
+import { Movement, Product, User, Customer, PurchaseOrder } from '../models/kardex.model'; 
 import { environment } from '../../../environment/environment';
 
 @Injectable({
@@ -11,7 +11,6 @@ export class KardexService {
   private zone = inject(NgZone); 
   
   // --- AUTENTICACIÓN CON PERSISTENCIA ---
-  // Al inicializar la señal, intentamos cargar al usuario desde localStorage
   currentUser = signal<User | null>(this.getUserFromStorage());
   
   private getUserFromStorage(): User | null {
@@ -20,13 +19,11 @@ export class KardexService {
   }
 
   login(user: User) {
-    // Guardamos en localStorage para que sobreviva al F5 (Refresh)
     localStorage.setItem('gra_user_session', JSON.stringify(user));
     this.currentUser.set(user);
   }
 
   logout() {
-    // Limpiamos el almacenamiento al salir
     localStorage.removeItem('gra_user_session');
     this.currentUser.set(null);
   }
@@ -35,10 +32,12 @@ export class KardexService {
   products = signal<Product[]>([]);
   movements = signal<Movement[]>([]);
   customers = signal<Customer[]>([]); 
+  purchaseOrders = signal<PurchaseOrder[]>([]);
   isLoading = signal<boolean>(false);
 
-  // --- ESTADO UI ---
+  // --- ESTADO UI / MODAL ---
   activeProduct = signal<Product | null>(null);
+  activePurchaseOrder = signal<PurchaseOrder | null>(null);
   movementType = signal<'ENTRY' | 'EXIT'>('ENTRY');
 
   // --- VALORES COMPUTADOS (Inventario y Movimientos) ---
@@ -95,35 +94,45 @@ export class KardexService {
   async loadInitialData() {
     this.isLoading.set(true);
     try {
-      const { data: prods, error: errProds } = await this.supabase
+      // Cargar Productos
+      const { data: prods } = await this.supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
-      if (errProds) throw errProds;
       
-      const { data: movs, error: errMovs } = await this.supabase
+      // Cargar Movimientos con Join a Productos
+      const { data: movs } = await this.supabase
         .from('movements')
         .select('*, products(code, unit_price)') 
         .order('date', { ascending: false })
         .limit(100);
-      if (errMovs) throw errMovs;
       
-      const formattedMovs = movs.map(m => ({
+      const formattedMovs = movs?.map(m => ({
         ...m,
         productCode: m.products?.code,
         baseCost: m.products?.unit_price 
-      }));
+      })) || [];
 
-      const { data: custs, error: errCusts } = await this.supabase
+      // Cargar Clientes
+      const { data: custs } = await this.supabase
         .from('customers')
         .select('*')
         .order('name', { ascending: true });
-      if (errCusts) throw errCusts;
+
+      // Cargar Órdenes de Compra con Join a Productos
+      const { data: ocs } = await this.supabase
+        .from('purchase_orders')
+        .select('*, products(name)')
+        .order('created_at', { ascending: false });
 
       this.zone.run(() => {
         this.products.set(prods || []);
-        this.movements.set(formattedMovs || []);
+        this.movements.set(formattedMovs);
         this.customers.set(custs || []);
+        this.purchaseOrders.set(ocs?.map(oc => ({
+          ...oc,
+          product_name: oc.products?.name
+        })) || []);
       });
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -132,86 +141,82 @@ export class KardexService {
     }
   }
 
+  // --- GESTIÓN DE ÓRDENES DE COMPRA ---
+  async addPurchaseOrder(ocData: any) {
+    const { data, error } = await this.supabase
+      .from('purchase_orders')
+      .insert([ocData])
+      .select('*, products(name)')
+      .single();
+    
+    if (!error) {
+      this.zone.run(() => {
+        const newOc = { ...data, product_name: data.products?.name };
+        this.purchaseOrders.update(prev => [newOc, ...prev]);
+      });
+    }
+  }
+
   // --- GESTIÓN DE PRODUCTOS ---
   async addProduct(productData: Partial<Product>) {
-    try {
-      const { data, error } = await this.supabase
-        .from('products')
-        .insert([{ ...productData, current_stock: 0 }])
-        .select()
-        .single();
-      if (error) throw error;
-      
-      this.zone.run(() => this.products.update(prev => [data, ...prev]));
-    } catch (error) {
-      console.error('Error al guardar producto:', error);
-      alert('Error al guardar el producto.');
-    }
+    const { data, error } = await this.supabase
+      .from('products')
+      .insert([{ ...productData, current_stock: 0 }])
+      .select()
+      .single();
+    if (!error) this.zone.run(() => this.products.update(prev => [data, ...prev]));
   }
 
   async updateProduct(id: string, productData: Partial<Product>) {
-    try {
-      const { data, error } = await this.supabase
-        .from('products')
-        .update(productData)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      
-      this.zone.run(() => this.products.update(prev => prev.map(p => p.id === id ? data : p)));
-    } catch (error) {
-      console.error('Error al actualizar producto:', error);
-      alert('Error al actualizar.');
-    }
+    const { data, error } = await this.supabase
+      .from('products')
+      .update(productData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (!error) this.zone.run(() => this.products.update(prev => prev.map(p => p.id === id ? data : p)));
   }
 
   async deleteProduct(id: string) {
-    try {
-      const { error } = await this.supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
-      
+    const { error } = await this.supabase.from('products').delete().eq('id', id);
+    if (!error) {
       this.zone.run(() => {
         this.products.update(prev => prev.filter(p => p.id !== id));
         this.movements.update(prev => prev.filter(m => m.product_id !== id));
       });
-    } catch (error) {
-      console.error('Error al eliminar producto:', error);
-      alert('Error al eliminar.');
     }
   }
 
   // --- GESTIÓN DE MOVIMIENTOS ---
-  openMovement(product: Product, type: 'ENTRY' | 'EXIT') {
+  openMovement(product: Product, type: 'ENTRY' | 'EXIT', oc?: PurchaseOrder) {
     this.activeProduct.set(product);
     this.movementType.set(type);
+    this.activePurchaseOrder.set(oc || null);
   }
 
   closeMovementModal() {
     this.activeProduct.set(null);
+    this.activePurchaseOrder.set(null);
   }
 
   // --- GESTIÓN DE CLIENTES ---
   async addCustomer(name: string, address?: string): Promise<string | null> {
-    try {
-      const { data, error } = await this.supabase
-        .from('customers')
-        .insert([{ name, address }])
-        .select()
-        .single();
-      if (error) throw error;
-      
+    const { data, error } = await this.supabase
+      .from('customers')
+      .insert([{ name, address }])
+      .select()
+      .single();
+    
+    if (!error) {
       this.zone.run(() => {
         this.customers.update(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
       });
       return data.id;
-    } catch (error) {
-      console.error('Error al guardar cliente:', error);
-      alert('Error al guardar el nuevo cliente.');
-      return null;
     }
+    return null;
   }
 
+  // --- PROCESAMIENTO DE MOVIMIENTOS CON AUTOMATIZACIÓN DE OC ---
   async processMovement(
     reference: string, 
     quantity: number, 
@@ -220,6 +225,7 @@ export class KardexService {
     financialData?: any
   ) {
     const product = this.activeProduct();
+    const oc = this.activePurchaseOrder();
     const type = this.movementType();
     const operator = this.currentUser()?.name || 'Desconocido';
     if (!product) return;
@@ -227,6 +233,7 @@ export class KardexService {
     try {
       const movementPayload = {
         product_id: product.id,
+        purchase_order_id: oc?.id || null, // Vínculo con la OC
         type,
         quantity,
         reference,
@@ -250,6 +257,7 @@ export class KardexService {
         detraction_amount: financialData?.detraccion || null
       };
 
+      // 1. Registrar Movimiento
       const { data: movData, error: movError } = await this.supabase
         .from('movements')
         .insert([movementPayload])
@@ -257,6 +265,24 @@ export class KardexService {
         .single();
       if (movError) throw movError;
 
+      // 2. AUTOMATIZACIÓN: Si hay una OC activa y es una SALIDA, actualizamos la cantidad entregada
+      if (oc && type === 'EXIT') {
+        const newDelivered = (oc.delivered_quantity || 0) + quantity;
+        const { error: ocError } = await this.supabase
+          .from('purchase_orders')
+          .update({ delivered_quantity: newDelivered })
+          .eq('id', oc.id);
+        
+        if (!ocError) {
+          this.zone.run(() => {
+            this.purchaseOrders.update(prev => 
+              prev.map(item => item.id === oc.id ? { ...item, delivered_quantity: newDelivered } : item)
+            );
+          });
+        }
+      }
+
+      // 3. Actualizar señales locales de movimientos y productos
       const formattedMov = { 
         ...movData, 
         productCode: movData.products?.code,
@@ -276,9 +302,10 @@ export class KardexService {
         }
         this.closeMovementModal();
       });
+
     } catch (error) {
       console.error('Error procesando movimiento:', error);
-      alert('No se pudo registrar el movimiento.');
+      alert('Error: No se pudo completar el registro.');
     }
   }
 }

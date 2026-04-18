@@ -53,91 +53,32 @@
   }
 
   <div class="overflow-x-auto">
-    <table class="w-full border-collapse min-w-[800px]">
-      <thead>
-        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-bold tracking-wider">
-          <th class="px-6 py-4">Código</th>
-          <th class="px-6 py-4">Producto</th>
-          <th class="px-6 py-4 text-center">Stock Actual</th>
-          <th class="px-6 py-4 text-center">Valor Stock</th>
-          <th class="px-6 py-4 text-center">Estado</th>
-          <th class="px-6 py-4 text-center">Operaciones</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-        @for (prod of filteredProducts(); track prod.id) {
+  <table class="w-full border-collapse">
+    <thead>
+      <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-bold tracking-wider">
+        <th class="px-6 py-4">Código</th>
+        <th class="px-6 py-4">Producto</th>
+        <th class="px-6 py-4 text-center">Stock Actual</th>
+        <th class="px-6 py-4 text-center">Gestión</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      @for (prod of filteredProducts(); track prod.id) {
         <tr class="hover:bg-slate-50/50 transition-colors">
-          <td class="px-6 py-4 font-mono text-sm font-bold text-slate-600">{{ prod.code }}</td>
-          <td class="px-6 py-4">
-            <div class="font-bold text-slate-800 text-base">{{ prod.name }}</div>
-            <div class="text-xs font-semibold text-slate-400 mt-0.5">Costo Base: {{ prod.unit_price | currency:'S/ ' }}</div>
-          </td>
+          <td class="px-6 py-4 font-mono text-sm font-bold">{{ prod.code }}</td>
+          <td class="px-6 py-4 font-bold">{{ prod.name }}</td>
+          <td class="px-6 py-4 text-center font-black text-xl">{{ prod.current_stock }}</td>
           <td class="px-6 py-4 text-center">
-            <span class="text-xl font-black text-slate-800">{{ prod.current_stock }}</span>
-            <span class="text-xs font-bold text-slate-400 ml-1">unid.</span>
-          </td>
-          <td class="px-6 py-4 text-center font-bold text-slate-700">
-            {{ (prod.current_stock * prod.unit_price) | currency:'S/ ' }}
-          </td>
-          <td class="px-6 py-4 text-center">
-            @if (prod.current_stock <= prod.min_stock) { 
-              <span class="px-3 py-1.5 bg-red-100 text-red-700 text-[10px] font-black rounded-full uppercase border border-red-200">Crítico</span>
-            } @else if (prod.current_stock <= prod.min_stock * 2) { 
-              <span class="px-3 py-1.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase border border-amber-200">Reponer</span>
-            } @else {
-              <span class="px-3 py-1.5 bg-green-100 text-green-700 text-[10px] font-black rounded-full uppercase border border-green-200">Óptimo</span>
-            }
-          </td>
-
-          <td class="px-6 py-4">
-            <div class="flex items-center justify-center gap-2">
-              
-              <button (click)="triggerMovement(prod, 'ENTRY')"
-                class="flex items-center gap-1.5 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-700 hover:text-white transition-all font-bold text-xs shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 5v14" />
-                  <path d="m19 12-7 7-7-7" />
-                </svg>
-                ENTRADA
-              </button>
-
-              <button (click)="triggerMovement(prod, 'EXIT')"
-                class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-600 hover:text-white transition-all font-bold text-xs shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 19V5" />
-                  <path d="m5 12 7-7 7 7" />
-                </svg>
-                SALIDA
-              </button>
-
-              <div class="w-px h-8 bg-slate-200 mx-1"></div>
-
-              <button (click)="editProduct(prod)" class="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-blue-300 hover:bg-blue-50 transition-all" title="Editar Producto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
-              </button>
-
-              <button (click)="confirmDelete(prod)" class="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-red-300 hover:bg-red-50 transition-all" title="Eliminar Producto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-              </button>
-
-            </div>
+            <button (click)="triggerMovement(prod, 'ENTRY')"
+              class="px-4 py-2 bg-purple-700 text-white rounded-xl font-bold text-xs hover:bg-purple-800 transition-all">
+              📥 REGISTRAR INGRESO
+            </button>
           </td>
         </tr>
-        } @empty {
-        <tr>
-          <td colspan="6" class="px-6 py-16 text-center">
-            <div class="flex flex-col items-center justify-center">
-              <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-              </div>
-              <p class="text-slate-500 font-medium">No se encontraron productos en el inventario.</p>
-            </div>
-          </td>
-        </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+      }
+    </tbody>
+  </table>
+</div>
 
   @if (productToDelete()) {
   <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">

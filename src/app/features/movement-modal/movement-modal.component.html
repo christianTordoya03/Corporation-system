@@ -1,198 +1,109 @@
-<div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh] transform transition-all">
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh]">
     
-    <div [class]="kardex.movementType() === 'ENTRY' ? 'bg-purple-700' : 'bg-amber-500'" class="p-5 text-white shrink-0 flex justify-between items-center">
+    <div [class]="kardex.movementType() === 'ENTRY' ? 'bg-indigo-700' : 'bg-amber-500'" class="p-6 text-white shrink-0 flex justify-between items-center">
       <div>
-        <h3 class="font-black text-xl tracking-tight">Registrar {{ kardex.movementType() === 'ENTRY' ? 'Entrada de Inventario' : 'Salida (Despacho y Facturación)' }}</h3>
-        <p class="text-white/90 text-sm font-medium mt-1">{{ kardex.activeProduct()?.name }} ({{ kardex.activeProduct()?.code }})</p>
+        <div class="flex items-center gap-2 mb-1">
+          @if (kardex.activePurchaseOrder()) {
+            <span class="bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-white/30">Vínculo: Orden de Compra</span>
+          }
+          <h3 class="font-black text-xl tracking-tight uppercase">Registrar {{ kardex.movementType() === 'ENTRY' ? 'Ingreso' : 'Despacho Diario' }}</h3>
+        </div>
+        <p class="text-white/80 text-sm font-bold">{{ kardex.activeProduct()?.name }} ({{ kardex.activeProduct()?.code }})</p>
       </div>
-      <button type="button" (click)="kardex.closeMovementModal()" class="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-xl transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      <button (click)="kardex.closeMovementModal()" class="text-white/70 hover:text-white bg-white/10 p-2.5 rounded-2xl transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
     
-    <div class="p-8 overflow-y-auto custom-scrollbar">
-      <form [formGroup]="movementForm" (ngSubmit)="submitMovement()" class="space-y-8">
+    <div class="p-8 overflow-y-auto custom-scrollbar bg-slate-50/30">
+      <form [formGroup]="movementForm" (ngSubmit)="submitMovement()" class="space-y-6">
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            @if (kardex.movementType() === 'ENTRY') {
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Origen del Ingreso</label>
-              <select formControlName="reference" class="w-full p-3 border-2 border-slate-100 rounded-xl outline-none focus:ring-0 focus:border-purple-600 transition-colors bg-slate-50 focus:bg-white text-slate-800 font-bold text-base cursor-pointer">
-                <option value="FABRICADO">Fabricado (Producción interna)</option>
-                <option value="COMPRADO">Comprado (Proveedor externo)</option>
-              </select>
-            } @else {
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ref. / N° Pedido</label>
-              <input formControlName="reference" class="w-full p-3 border-2 border-slate-100 rounded-xl outline-none focus:ring-0 focus:border-purple-600 transition-colors bg-slate-50 focus:bg-white text-slate-800 font-bold text-lg" placeholder="Ej: PED-123">
-            }
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cantidad</label>
-            <input type="number" formControlName="quantity" class="w-full p-3 border-2 border-slate-100 rounded-xl outline-none focus:ring-0 focus:border-purple-600 transition-colors bg-slate-50 focus:bg-white text-slate-800 font-bold text-lg">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div class="md:col-span-1">
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Referencia / O.C.</label>
+            <input formControlName="reference" 
+              [class.bg-slate-100]="kardex.activePurchaseOrder()"
+              class="w-full p-3 border-2 border-slate-50 rounded-xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Costo Base Unit.</label>
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cantidad a Procesar</label>
+            <input type="number" formControlName="quantity" class="w-full p-3 border-2 border-slate-50 rounded-xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
+          </div>
+          <div>
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Costo Unitario</label>
             <div class="relative">
-              <span class="absolute left-4 top-3.5 text-slate-400 font-bold">S/</span>
-              <input type="number" formControlName="unitCost" class="w-full pl-9 pr-4 py-3 border-2 border-slate-100 rounded-xl outline-none focus:ring-0 focus:border-purple-600 transition-colors bg-slate-50 focus:bg-white text-slate-800 font-bold text-lg">
+              <span class="absolute left-4 top-3.5 font-bold text-slate-300 text-sm">S/</span>
+              <input type="number" formControlName="unitCost" class="w-full pl-10 p-3 border-2 border-slate-50 rounded-xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
             </div>
           </div>
         </div>
 
         @if (kardex.movementType() === 'EXIT') {
-          <hr class="border-slate-100">
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            <div class="space-y-5">
-              <h4 class="text-sm font-bold text-amber-600 uppercase tracking-widest flex items-center gap-2 mb-4 border-b border-amber-100 pb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                Documentación Comercial
-              </h4>
-              
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 space-y-4 shadow-sm">
+              <h4 class="text-xs font-black text-amber-600 uppercase tracking-widest border-b border-amber-50 pb-3">Trazabilidad de Documentos</h4>
               <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Fecha O.C.</label>
-                  <input type="date" formControlName="oc_date" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white transition-colors outline-none focus:border-purple-400">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Fecha Entrega</label>
-                  <input type="date" formControlName="delivery_date" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white transition-colors outline-none focus:border-purple-400">
-                </div>
-                
-                <div class="col-span-2">
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Tratamiento Técnico (Proceso)</label>
-                  <select formControlName="proceso" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-slate-50 focus:bg-white transition-colors outline-none focus:border-purple-400 cursor-pointer">
-                    <option value="">Ninguno (Normal)</option>
-                    <option value="HT (Térmico)">Tratamiento Térmico (HT)</option>
-                    <option value="Fumigado">Fumigado</option>
-                    <option value="Secado">Secado en Horno</option>
-                    <option value="HT + Fumigado">HT + Fumigado</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">N° Guía Remisión</label>
-                  <input formControlName="remission_guide" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white uppercase transition-colors outline-none focus:border-purple-400" placeholder="Ej: T001-123">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Fecha Guía</label>
-                  <input type="date" formControlName="remission_date" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white transition-colors outline-none focus:border-purple-400">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">N° Factura</label>
-                  <input formControlName="invoice_number" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white uppercase transition-colors outline-none focus:border-purple-400" placeholder="Ej: F001-55">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Fecha Factura</label>
-                  <input type="date" formControlName="invoice_date" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white transition-colors outline-none focus:border-purple-400">
-                </div>
+                <div><label class="text-[10px] font-bold text-slate-400 mb-1 block">F. de O.C.</label><input type="date" formControlName="oc_date" class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-bold outline-none"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 mb-1 block">F. de Entrega</label><input type="date" formControlName="delivery_date" class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-bold outline-none"></div>
+              </div>
+              <div>
+                <label class="text-[10px] font-bold text-slate-400 mb-1 block">Tratamiento Técnico (Proceso)</label>
+                <select formControlName="proceso" class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-bold bg-slate-50 outline-none">
+                  <option value="">Ninguno (Normal)</option>
+                  <option value="HT (Térmico)">Tratamiento Térmico (HT)</option>
+                  <option value="Fumigado">Fumigado</option>
+                  <option value="Secado">Secado en Horno</option>
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div><label class="text-[10px] font-bold text-slate-400 mb-1 block">N° Guía Remisión</label><input formControlName="remission_guide" class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-bold uppercase" placeholder="T001-000"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 mb-1 block">N° Factura</label><input formControlName="invoice_number" class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-bold uppercase" placeholder="F001-000"></div>
               </div>
             </div>
 
-            <div class="space-y-5">
-              <h4 class="text-sm font-bold text-purple-700 uppercase tracking-widest flex items-center gap-2 mb-4 border-b border-purple-100 pb-2">
-                Despacho
-              </h4>
-
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 space-y-4 shadow-sm">
+              <h4 class="text-xs font-black text-indigo-600 uppercase tracking-widest border-b border-indigo-50 pb-3">Logística y Destino</h4>
               <div>
-                <div class="flex justify-between items-end mb-2">
-                  <label class="block text-xs font-bold text-slate-500">Cliente / Destino</label>
-                  <button type="button" (click)="toggleCustomerMode()" class="text-xs font-bold text-purple-600 hover:text-purple-800 hover:underline transition-colors bg-purple-50 px-2 py-1 rounded-md">
-                    {{ isNewCustomer() ? 'Seleccionar Existente' : '+ Registrar Nuevo' }}
-                  </button>
-                </div>
-
-                @if (!isNewCustomer()) {
-                  <select formControlName="customer_id" class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 cursor-pointer focus:bg-white transition-colors outline-none focus:border-purple-400">
-                    <option value="">-- Seleccionar de la lista --</option>
-                    @for (c of kardex.customers(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
-                  </select>
-                } @else {
-                  <div class="space-y-3 p-4 bg-purple-50 border border-purple-100 rounded-xl shadow-inner">
-                    <input formControlName="newCustomerName" class="w-full p-2.5 border border-purple-200 rounded-lg text-sm font-medium bg-white outline-none focus:border-purple-500" placeholder="Nombre Comercial / Razón Social *">
-                    <input formControlName="newCustomerAddress" class="w-full p-2.5 border border-purple-200 rounded-lg text-sm font-medium bg-white outline-none focus:border-purple-500" placeholder="Dirección de entrega (Opcional)">
-                  </div>
-                }
+                <label class="text-[10px] font-bold text-slate-400 mb-1 block">Cliente Receptor</label>
+                <select formControlName="customer_id" 
+                  [class.bg-slate-100]="kardex.activePurchaseOrder()"
+                  class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-bold outline-none">
+                  <option value="">-- Seleccionar --</option>
+                  @for (c of kardex.customers(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+                </select>
               </div>
-
               <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Placa Camión</label>
-                  <input formControlName="truck_plate" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white uppercase transition-colors outline-none focus:border-purple-400" placeholder="ABC-123">
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-500 mb-1.5">Conductor</label>
-                  <input formControlName="driver_name" class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:bg-white transition-colors outline-none focus:border-purple-400" placeholder="Nombre completo">
-                </div>
+                <div><label class="text-[10px] font-bold text-slate-400 mb-1 block">Placa Vehículo</label><input formControlName="truck_plate" class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-bold uppercase" placeholder="ABC-123"></div>
+                <div><label class="text-[10px] font-bold text-slate-400 mb-1 block">DNI/Conductor</label><input formControlName="driver_name" class="w-full p-2.5 border border-slate-100 rounded-xl text-xs font-medium" placeholder="Nombre..."></div>
               </div>
-
-              <div class="flex gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
-                <label class="flex items-center gap-3 cursor-pointer flex-1">
-                  <input type="checkbox" formControlName="apply_retention" class="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-600 cursor-pointer">
-                  <span class="text-sm font-bold text-slate-700">Retención (3%)</span>
-                </label>
-                <div class="w-28">
-                  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Detracción %</label>
-                  <div class="relative">
-                    <input type="number" formControlName="detraction_pct" class="w-full p-2 border-2 border-slate-200 rounded-lg text-sm font-bold pr-7 text-right outline-none focus:border-purple-400 bg-white" placeholder="Ej: 12">
-                    <span class="absolute right-3 top-2 text-slate-400 text-sm font-bold">%</span>
-                  </div>
-                </div>
+              <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-2xl border border-indigo-100 mt-2">
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" formControlName="apply_retention" class="w-4 h-4 text-indigo-600 rounded border-indigo-200"><span class="text-[10px] font-black text-indigo-700 uppercase">Retención 3%</span></label>
+                <div class="flex items-center gap-2"><span class="text-[10px] font-black text-indigo-400 uppercase">Detracc.%</span><input type="number" formControlName="detraction_pct" class="w-12 p-1.5 border border-indigo-200 rounded-lg text-xs font-bold text-center outline-none"></div>
               </div>
-
             </div>
           </div>
 
-          <div class="bg-slate-900 rounded-2xl p-6 text-white mt-6 shadow-inner border border-slate-800">
-            <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Cálculos para Facturación</h4>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-              <div>
-                <div class="text-[11px] text-slate-400 uppercase mb-1">Venta Neta</div>
-                <div class="font-mono text-lg font-medium">S/ {{ calcSubtotal | number:'1.2-2' }}</div>
-              </div>
-              <div>
-                <div class="text-[11px] text-slate-400 uppercase mb-1">IGV (18%)</div>
-                <div class="font-mono text-lg font-medium text-slate-300">S/ {{ calcIgv | number:'1.2-2' }}</div>
-              </div>
-              <div class="bg-slate-800 p-3 -my-3 rounded-xl border border-slate-700 shadow-lg">
-                <div class="text-[11px] text-amber-400 uppercase font-bold mb-1">Total Facturado</div>
-                <div class="font-mono text-xl font-bold text-amber-400">S/ {{ calcTotalFactura | number:'1.2-2' }}</div>
-              </div>
-              <div>
-                <div class="text-[11px] text-slate-400 uppercase mb-1">Retención</div>
-                <div class="font-mono text-lg font-medium text-red-400">- S/ {{ calcRetencion | number:'1.2-2' }}</div>
-              </div>
-              <div>
-                <div class="text-[11px] text-slate-400 uppercase mb-1">Detracción</div>
-                <div class="font-mono text-lg font-medium text-red-400">- S/ {{ calcDetraccion | number:'1.2-2' }}</div>
-              </div>
+          <div class="bg-slate-900 rounded-3xl p-6 text-white shadow-xl">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-6 text-center items-center">
+              <div class="border-r border-white/10 last:border-0"><p class="text-[9px] text-slate-500 font-black uppercase mb-1">Venta Neta</p><p class="text-sm font-bold">{{ calcSubtotal | currency:'S/ ' }}</p></div>
+              <div class="border-r border-white/10 last:border-0"><p class="text-[9px] text-slate-500 font-black uppercase mb-1">IGV (18%)</p><p class="text-sm font-bold text-slate-400">{{ calcIgv | currency:'S/ ' }}</p></div>
+              <div class="bg-indigo-600/20 rounded-2xl py-3 px-2 border border-indigo-500/30"><p class="text-[9px] text-indigo-400 font-black uppercase mb-1">Total Facturar</p><p class="text-xl font-black text-indigo-400">{{ calcTotalFactura | currency:'S/ ' }}</p></div>
+              <div class="border-r border-white/10 last:border-0"><p class="text-[9px] text-slate-500 font-black uppercase mb-1">Retención</p><p class="text-sm font-bold text-rose-400">-{{ calcRetencion | currency:'S/ ' }}</p></div>
+              <div><p class="text-[9px] text-slate-500 font-black uppercase mb-1">Detracción</p><p class="text-sm font-bold text-rose-400">-{{ calcDetraccion | currency:'S/ ' }}</p></div>
             </div>
           </div>
         }
 
-        @if (kardex.movementType() === 'EXIT' && (kardex.activeProduct()?.current_stock || 0) < (movementForm.get('quantity')?.value || 0)) {
-          <div class="p-4 bg-red-50 text-red-700 text-sm font-bold rounded-xl flex items-center gap-3 border border-red-200">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Stock insuficiente. (Disponible: {{ kardex.activeProduct()?.current_stock }})
-          </div>
-        }
-
-        <div class="flex gap-4 pt-4 shrink-0 border-t border-slate-100 mt-4">
-          <button type="button" (click)="kardex.closeMovementModal()" class="w-1/3 px-6 py-4 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-all text-lg">
-            Cancelar
-          </button>
-          
-          <button type="submit" [disabled]="!movementForm.valid || (kardex.movementType() === 'EXIT' && (kardex.activeProduct()?.current_stock || 0) < (movementForm.get('quantity')?.value || 0))" 
-            [class]="kardex.movementType() === 'ENTRY' ? 'bg-purple-700 hover:bg-purple-800 shadow-purple-700/25' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30'"
-            class="w-2/3 px-6 py-4 text-white rounded-xl font-bold disabled:opacity-50 transition-all shadow-xl text-lg flex justify-center items-center gap-2">
+        <div class="flex gap-4 pt-4 border-t border-slate-100">
+          <button type="button" (click)="kardex.closeMovementModal()" class="flex-1 py-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all text-xs uppercase tracking-widest">Cancelar</button>
+          <button type="submit" [disabled]="!movementForm.valid && !movementForm.disabled" 
+            [class]="kardex.movementType() === 'ENTRY' ? 'bg-indigo-700 shadow-indigo-200' : 'bg-amber-500 shadow-amber-200'" 
+            class="flex-[2] py-4 text-white rounded-2xl font-black shadow-lg text-xs uppercase tracking-widest hover:scale-[1.02] transition-all">
             Procesar Operación
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
         </div>
-
       </form>
     </div>
   </div>

@@ -56,6 +56,7 @@ export class HeaderComponent {
 
   tabs = [
     { id: 'dashboard', label: 'Dashboard' },
+    { id: 'orders', label: 'Gestión de Despachos' },
     { id: 'inventory', label: 'Inventario' },
     { id: 'history', label: 'Movimientos' }
   ];

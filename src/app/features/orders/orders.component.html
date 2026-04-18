@@ -1,0 +1,80 @@
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+  
+  <div class="lg:col-span-1 space-y-4">
+    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Clientes Activos</h3>
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      @for (cust of kardex.customers(); track cust.id) {
+        <button (click)="selectedCustomer.set(cust)" 
+          [class]="selectedCustomer()?.id === cust.id ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50 text-slate-700'"
+          class="w-full text-left p-5 border-b border-slate-100 last:border-0 transition-all group">
+          <p class="text-xs font-black uppercase tracking-tight">{{ cust.name }}</p>
+          <p class="text-[10px] opacity-70 mt-1 font-bold">Ver órdenes de compra →</p>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="lg:col-span-3">
+    @if (selectedCustomer()) {
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm min-h-[600px]">
+        <div class="flex justify-between items-center mb-10 border-b border-slate-100 pb-6">
+          <div>
+            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Panel de Despacho</span>
+            <h2 class="text-2xl font-black text-slate-900 uppercase mt-1">{{ selectedCustomer()?.name }}</h2>
+          </div>
+          <button class="bg-slate-900 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase shadow-lg shadow-slate-200 hover:scale-105 transition-transform">
+            + Nueva Orden de Compra
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+          @for (oc of customerOrders(); track oc.id) {
+            <div class="border-2 border-slate-50 rounded-3xl p-6 bg-slate-50/30 hover:border-indigo-100 transition-all">
+              <div class="flex justify-between items-start mb-6">
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase border border-emerald-100">Abierta</span>
+                    <span class="text-sm font-black text-slate-800 tracking-tight">{{ oc.oc_number }}</span>
+                  </div>
+                  <h4 class="text-base font-bold text-slate-600">{{ oc.product_name }}</h4>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Despachado</p>
+                  <p class="text-2xl font-black text-slate-900">
+                    {{ oc.delivered_quantity | number }} / <span class="text-slate-300">{{ oc.total_quantity | number }}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden mb-8 shadow-inner">
+                <div class="bg-indigo-600 h-full transition-all duration-1000" [style.width.%]="(oc.delivered_quantity / oc.total_quantity) * 100"></div>
+              </div>
+
+              <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex gap-4">
+                   <button class="text-[10px] font-black text-slate-400 uppercase hover:text-indigo-600">Ver Historial Diario</button>
+                   <button class="text-[10px] font-black text-slate-400 uppercase hover:text-indigo-600">Editar Cantidades</button>
+                </div>
+                <button (click)="registrarDespachoDiario(oc)" 
+                  class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-[11px] font-black uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+                  + Registrar Despacho del Día
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <div class="py-20 text-center">
+              <p class="text-slate-400 font-bold italic">No hay órdenes de compra registradas para este cliente.</p>
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="h-full min-h-[500px] flex flex-col items-center justify-center border-4 border-dashed border-slate-100 rounded-[3rem] bg-white">
+        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <p class="text-slate-400 font-black uppercase tracking-widest text-sm">Seleccione una empresa para gestionar despachos</p>
+      </div>
+    }
+  </div>
+</div>
